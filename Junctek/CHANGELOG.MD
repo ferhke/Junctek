@@ -1,3 +1,7 @@
+## 1.0.69
+- Fix energy sensor scaling: Ah→kWh now uses `Ah * V / 1000` (was Wh labeled as kWh)
+- Stop multiplying charge/discharge by voltage (device already reports kWh)
+
 ## 1.0.68
 - Fix MQTT Supervisor URL (`http://supervisor/services/mqtt` instead of double slash)
 - Build from local Dockerfile (removed prebuilt `ghcr.io/tsjippy` image)

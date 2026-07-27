@@ -28,10 +28,10 @@ class JunctekMonitor:
             "current":          "c1",       # Amps
             "cur_soc":          "d0",       # %
             "dir_of_current":   "d1",   
-            "ah_remaining":     "d2",
-            "discharge":        "d3",		# todays total in kWh
-            "charge":           "d4",       # todays total in kWh
-            "accum_charge_cap": "d5",       # accumulated charging capacity Ah (/1000)
+            "ah_remaining":     "d2",       # Ah (/1000) → published as kWh
+            "discharge":        "d3",		# todays total in kWh (/100000)
+            "charge":           "d4",       # todays total in kWh (/100000)
+            "accum_charge_cap": "d5",       # accumulated charging capacity Ah (/1000) → published as kWh
             "mins_remaining":   "d6",
             "power":            "d8",       # Watt
             "temp":             "d9",       # C
@@ -187,8 +187,12 @@ class JunctekMonitor:
                 if not key in sensors.sensors:
                     continue
 
-                if key == "ah_remaining" or key == "cap" or key == "accum_charge_cap" or key == "discharge" or key == "charge":
-                    val   = round(value *  self.battery_voltage, 2)
+                # ah_remaining / accum_charge_cap are Ah → kWh = Ah * V / 1000
+                if key in ("ah_remaining", "cap", "accum_charge_cap"):
+                    val   = round(value * self.battery_voltage / 1000, 2)
+                # charge / discharge are already kWh from the device (/100000)
+                elif key in ("discharge", "charge"):
+                    val   = round(value, 2)
                 elif key == "mins_remaining":
                     val   = round(value , 0)
                 else:
