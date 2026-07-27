@@ -1,6 +1,9 @@
+## 1.0.74
+- Revert 1.0.73: Charged/Discharged Today are already kWh from the device
+- Keep Ah→kWh (`* V / 1000`) only for Remaining Energy and Accumulated Charged Load
+
 ## 1.0.73
-- Fix Charged/Discharged Today: device values are Ah, convert with `Ah * V / 1000` to kWh
-  (96.55 was Ah ≈ 4.6 kWh at 48V, not 96.55 kWh)
+- (reverted) Incorrectly treated charge/discharge as Ah
 
 ## 1.0.72
 - Rebuild bump so Home Assistant Supervisor picks up 1.0.71 BT reconnect fix
