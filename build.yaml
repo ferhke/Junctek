@@ -1,0 +1,14 @@
+# https://developers.home-assistant.io/docs/add-ons/configuration#add-on-dockerfile
+build_from:
+  aarch64: "ghcr.io/home-assistant/aarch64-base:3.21"
+  amd64: "ghcr.io/home-assistant/amd64-base:3.21"
+  armhf: "ghcr.io/home-assistant/armhf-base:3.21"
+  armv7: "ghcr.io/home-assistant/armv7-base:3.21"
+  i386: "ghcr.io/home-assistant/i386-base:3.21"
+labels:
+  org.opencontainers.image.title: "Junctek Addon"
+  org.opencontainers.image.description: "Reads From A Junctek Battery Monitor over BLE"
+  org.opencontainers.image.source: "https://github.com/Tsjippy/ha-addons/tree/main/Junctek"
+  org.opencontainers.image.licenses: "Apache License 2.0"
+args:
+  TEMPIO_VERSION: "2024.11.2"
