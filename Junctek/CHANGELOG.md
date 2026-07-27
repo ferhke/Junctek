@@ -1,3 +1,7 @@
+## 1.0.70
+- Rename changelog to `CHANGELOG.md` so Home Assistant can find it
+- Force store refresh for energy scaling fix (1.0.69)
+
 ## 1.0.69
 - Fix energy sensor scaling: Ah→kWh now uses `Ah * V / 1000` (was Wh labeled as kWh)
 - Stop multiplying charge/discharge by voltage (device already reports kWh)
