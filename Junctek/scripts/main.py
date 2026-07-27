@@ -171,13 +171,8 @@ class JunctekMonitor:
                     # Not published (SoC computed; e6/e7 unused)
                     del values[key]
 
-            # Sign convention: discharge (load) positive, charge negative — matches manual charge/discharge
-            if "current" in values:
-                if self.charging:
-                    values["current"] *= -1
-            if "power" in values:
-                if self.charging:
-                    values["power"] *= -1
+            # Publish magnitude as measured; direction is in D1 / charging flag.
+            # (Do not negate on charge — HA users expect positive amps while charging.)
 
             # SoC = remaining Ah / preset capacity (manual: remaining / AH.Preset)
             if "ah_remaining" in values and self.battery_capacity > 0:

@@ -1,3 +1,6 @@
+## 1.0.77
+- Stop negating Current/Power while charging (show positive amps like the JUNCTEK APP)
+
 ## 1.0.76
 - Re-audit for **KL140F** against official KL-F manual (R50):
   - Confirm scales: V/100, A/100, Ah/1000, kWh/100000, temp−100, life=min
