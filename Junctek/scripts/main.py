@@ -24,18 +24,22 @@ class JunctekMonitor:
         signal.signal(signal.SIGTERM, self.signal_handler)
 
         self.params = {
-            # Scales from JUNCTEK KL-F manual, R50 read-all (same factors used on BLE)
-            "voltage":          "c0",       # V  (/100)
-            "current":          "c1",       # A  (/100)
-            "cur_soc":          "d0",       # % (device; we also compute from Ah)
-            "dir_of_current":   "d1",       # 0 forward / 1 reverse
-            "ah_remaining":     "d2",       # Ah (/1000) — Remaining AH.Rmn
-            "discharge":        "d3",       # kWh (/100000) — like R50 watt-hour (Electricity)
-            "charge":           "d4",       # kWh (/100000)
-            "accum_charge_cap": "d5",       # Ah (/1000) — Cumulative / Elapsed AH
-            "mins_remaining":   "d6",       # min — Battery life (BatLeft)
-            "power":            "d8",       # W  (/100)
-            "temp":             "d9",       # °C (raw - 100)
+            # KL140F (KL-F series) — scales from official R50 example in user manual:
+            #   2056 → 20.56V (/100), 200 → 2.00A (/100), 5408 → 5.408Ah (/1000),
+            #   4592 → 4.592Ah cumulative (/1000), 9437 → 0.09437 kWh (/100000),
+            #   134 → 34°C (raw-100), 162 → 162 min battery life
+            # KL140F: voltage 0.01V, current 0.1A (protocol still /100), Ah 0.001, Wh 0.01
+            "voltage":          "c0",       # V
+            "current":          "c1",       # A
+            "cur_soc":          "d0",       # device % (optional)
+            "dir_of_current":   "d1",       # 0 forward (discharge), 1 reverse (charge) per R50
+            "ah_remaining":     "d2",       # Ah — APP: Remaining AH.Rmn
+            "discharge":        "d3",       # kWh — same scale as R50 watt-hour / Electricity
+            "charge":           "d4",       # kWh
+            "accum_charge_cap": "d5",       # Ah — APP: Cumulative / Elapsed AH
+            "mins_remaining":   "d6",       # min — APP: BatLeft
+            "power":            "d8",       # W
+            "temp":             "d9",       # °C
             "full_charge_volt": "e6",
             "zero_charge_volt": "e7",
         }
@@ -124,60 +128,63 @@ class JunctekMonitor:
                 else:
                     self.logger.debug(f"Raw values: {values}")
 
-            # now format to the correct decimal place, or perform other formatting
+            # Apply official KL-F / R50 scaling
             for key, value in list(values.items()):
                 if not value.isdigit():
                     del values[key]
+                    continue
 
-                val_int = int(value)                
+                val_int = int(value)
                 if key == "voltage":
-                    voltage   = val_int / 100 
-
-                    # Only keep valid values leave out unrealistically values
-                    if voltage > ( self.battery_voltage - (self.battery_voltage * 0.2)):
-                        values[key] = voltage               
+                    voltage = val_int / 100
+                    # Drop clearly bad BLE frames (KL140F valid band ~10–120 V self-powered)
+                    if voltage > (self.battery_voltage - (self.battery_voltage * 0.2)):
+                        values[key] = voltage
+                    else:
+                        del values[key]
                 elif key == "current":
                     values[key] = val_int / 100
-                    
-                    if self.charging == True:
-                        values["current"] *= -1
                 elif key == "discharge":
-                    # Device reports kWh (/100000)
+                    # R50 watt-hour: 9437 → 0.09437 kWh
                     values[key] = val_int / 100000
-                    self.charging = False
                 elif key == "charge":
-                    # Device reports kWh (/100000)
                     values[key] = val_int / 100000
-                    self.charging = True
                 elif key == "dir_of_current":
-                    if value == "01":
-                        self.charging = True
-                    else:
-                        self.charging = False
+                    # R50: 0 = forward, 1 = reverse. APP: reverse/charge grows remaining Ah
+                    self.charging = val_int == 1
+                    del values[key]
                 elif key == "ah_remaining":
                     values[key] = val_int / 1000
                 elif key == "mins_remaining":
                     values[key] = val_int
                 elif key == "power":
                     values[key] = val_int / 100
-                    
-                    if self.charging == False:
-                        values["power"] *= -1
                 elif key == "temp":
-                    # Manual: ambient = raw - 100, range -20..120°C
-                    temp    = val_int - 100
+                    temp = val_int - 100
                     if -20 <= temp <= 120:
                         values[key] = temp
+                    else:
+                        del values[key]
                 elif key == "accum_charge_cap":
-                    values[key] = val_int / 1000    
+                    values[key] = val_int / 1000
+                elif key in ("cur_soc", "full_charge_volt", "zero_charge_volt"):
+                    # Not published (SoC computed; e6/e7 unused)
+                    del values[key]
 
-            # SoC = remaining Ah / preset capacity (manual: AH.Remaining)
-            if "ah_remaining" in values:
+            # Sign convention: discharge (load) positive, charge negative — matches manual charge/discharge
+            if "current" in values:
+                if self.charging:
+                    values["current"] *= -1
+            if "power" in values:
+                if self.charging:
+                    values["power"] *= -1
+
+            # SoC = remaining Ah / preset capacity (manual: remaining / AH.Preset)
+            if "ah_remaining" in values and self.battery_capacity > 0:
                 values["soc"] = values["ah_remaining"] / self.battery_capacity * 100
 
-            # Now it should be formatted corrected, in a dictionary
             if self.debug:
-                self.logger.debug(f"Final values: {values}")
+                self.logger.debug(f"Final values: {values} charging={self.charging}")
 
             await self.send_to_ha(values)
 
@@ -185,20 +192,26 @@ class JunctekMonitor:
             self.logger.error(f"{str(e)} on line {sys.exc_info()[-1].tb_lineno}")
 
     async def send_to_ha(self, values):
-        try:           
+        try:
             for key, value in values.items():
-                if not key in sensors.sensors:
+                if key not in sensors.sensors:
                     continue
 
-                # Per KL-F R50: remaining & cumulative stay Ah; charge/discharge stay kWh
+                # Rounding matches KL140F resolutions in the manual
                 if key in ("ah_remaining", "accum_charge_cap"):
-                    val   = round(value, 3)
+                    val = round(value, 3)          # 0.001 Ah
                 elif key in ("discharge", "charge"):
-                    val   = round(value, 2)
+                    val = round(value, 5)          # 0.01 Wh → 0.00001 kWh
+                elif key == "voltage":
+                    val = round(value, 2)          # 0.01 V
+                elif key == "power":
+                    val = round(value, 2)          # 0.01 W
+                elif key == "current":
+                    val = round(value, 1)          # KL140F: 0.1 A
                 elif key == "mins_remaining":
-                    val   = round(value , 0)
+                    val = round(value, 0)
                 else:
-                    val   = round(value , 1)
+                    val = round(value, 1)
 
                 if val > -99:
                     self.MqqtToHa.send_value(key, val)

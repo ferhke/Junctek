@@ -1,3 +1,11 @@
+## 1.0.76
+- Re-audit for **KL140F** against official KL-F manual (R50):
+  - Confirm scales: V/100, A/100, Ah/1000, kWh/100000, temp−100, life=min
+  - Fix sign: charge = negative current **and** power (was inconsistent)
+  - Direction only from D1 (not from D3/D4 packets)
+  - Rounding per KL140F resolution (0.01V, 0.1A, 0.01W, 0.001Ah, 0.01Wh)
+  - Model set to KL140F
+
 ## 1.0.75
 - Align sensors with JUNCTEK KL-F manual (R50): Remaining/Cumulative as **Ah**, Charge/Discharge as **kWh**
 - Rename sensors to match APP (Remaining Capacity, Cumulative Capacity, Battery Life, Charged/Discharged Energy)

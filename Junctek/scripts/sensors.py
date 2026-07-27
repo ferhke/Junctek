@@ -4,11 +4,11 @@ device              = {
         "solar_batteries_ble"
     ],
     "name": "Battery Status Monitor",
-    "model": "Junctec",
+    "model": "KL140F",
     "manufacturer": "Juntek"
 }
 
-# Sensor definition — units follow JUNCTEK KL-F manual (R50 protocol)
+# Sensor definition — JUNCTEK KL-F / KL140F manual (R50 + APP field names)
 sensors = {
     'voltage': {
         "name": "Voltage",
@@ -22,7 +22,7 @@ sensors = {
         "state": "measurement",
         "unit": "A",
         "type": "CURRENT",
-        "icon": "mdi:current-ac"
+        "icon": "mdi:current-dc"
     },
     'power': {
         "name": "Power",
