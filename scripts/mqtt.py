@@ -43,7 +43,7 @@ class MqqtToHa:
         try:
             token               = os.getenv('SUPERVISOR_TOKEN')
 
-            url                 = "http://supervisor//services/mqtt"
+            url                 = "http://supervisor/services/mqtt"
             headers             = {
                 "Authorization": f"Bearer {token}",
                 "content-type": "application/json",
