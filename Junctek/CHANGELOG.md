@@ -1,3 +1,7 @@
+## 1.0.73
+- Fix Charged/Discharged Today: device values are Ah, convert with `Ah * V / 1000` to kWh
+  (96.55 was Ah ≈ 4.6 kWh at 48V, not 96.55 kWh)
+
 ## 1.0.72
 - Rebuild bump so Home Assistant Supervisor picks up 1.0.71 BT reconnect fix
 

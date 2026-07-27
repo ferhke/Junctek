@@ -29,9 +29,9 @@ class JunctekMonitor:
             "cur_soc":          "d0",       # %
             "dir_of_current":   "d1",   
             "ah_remaining":     "d2",       # Ah (/1000) → published as kWh
-            "discharge":        "d3",		# todays total in kWh (/100000)
-            "charge":           "d4",       # todays total in kWh (/100000)
-            "accum_charge_cap": "d5",       # accumulated charging capacity Ah (/1000) → published as kWh
+            "discharge":        "d3",		# Ah (/100000) → published as kWh
+            "charge":           "d4",       # Ah (/100000) → published as kWh
+            "accum_charge_cap": "d5",       # Ah (/1000) → published as kWh
             "mins_remaining":   "d6",
             "power":            "d8",       # Watt
             "temp":             "d9",       # C
@@ -141,9 +141,11 @@ class JunctekMonitor:
                     if self.charging == True:
                         values["current"] *= -1
                 elif key == "discharge":
+                    # Device reports Ah (/100000), not kWh
                     values[key] = val_int / 100000
                     self.charging = False
                 elif key == "charge":
+                    # Device reports Ah (/100000), not kWh
                     values[key] = val_int / 100000
                     self.charging = True
                 elif key == "dir_of_current":
@@ -187,12 +189,9 @@ class JunctekMonitor:
                 if not key in sensors.sensors:
                     continue
 
-                # ah_remaining / accum_charge_cap are Ah → kWh = Ah * V / 1000
-                if key in ("ah_remaining", "cap", "accum_charge_cap"):
+                # Capacity/energy fields from device are Ah → publish kWh = Ah * V / 1000
+                if key in ("ah_remaining", "cap", "accum_charge_cap", "discharge", "charge"):
                     val   = round(value * self.battery_voltage / 1000, 2)
-                # charge / discharge are already kWh from the device (/100000)
-                elif key in ("discharge", "charge"):
-                    val   = round(value, 2)
                 elif key == "mins_remaining":
                     val   = round(value , 0)
                 else:
