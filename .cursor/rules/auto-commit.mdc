@@ -1,0 +1,14 @@
+---
+description: Automatically commit (and push) after meaningful changes
+alwaysApply: true
+---
+
+# Auto commit
+
+After completing a meaningful change in this repository:
+
+1. Commit automatically without asking.
+2. Push to `origin` on the current branch after a successful commit.
+3. Use a concise commit message that explains why.
+4. Do not ask "should I commit?" or "should I push?" — just do it.
+5. Still follow normal git safety: no force push, no amend of pushed commits, no secrets in commits.
