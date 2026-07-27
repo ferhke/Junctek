@@ -8,7 +8,7 @@ device              = {
     "manufacturer": "Juntek"
 }
 
-# Sensor definition
+# Sensor definition — units follow JUNCTEK KL-F manual (R50 protocol)
 sensors = {
     'voltage': {
         "name": "Voltage",
@@ -43,42 +43,36 @@ sensors = {
         "state": "measurement",
         "unit": "%",
         "type": "BATTERY",
-        #"icon": "mdi:thermometer"
     },
     'ah_remaining': {
-        "name": "Remaining Energy",
+        "name": "Remaining Capacity",
         "state": "measurement",
-        "unit": "kWh",
-        "type": "ENERGY_STORAGE",
-        #"icon": "mdi:thermometer"
+        "unit": "Ah",
+        "icon": "mdi:battery"
     },
     'mins_remaining': {
-        "name": "Remaining Time",
+        "name": "Battery Life",
         "state": "measurement",
         "unit": "min",
         "type": "DURATION",
-        #"icon": "mdi:thermometer"
     },
     'accum_charge_cap': {
-        "name": "Accumulated Charged Load",
+        "name": "Cumulative Capacity",
         "state": "measurement",
-        "unit": "kWh",
-        "type": "ENERGY_STORAGE",
-        #"icon": "mdi:thermometer"
+        "unit": "Ah",
+        "icon": "mdi:battery-sync"
     },
     'discharge': {
-        "name": "Discharged Today",
-        "state": "measurement",
+        "name": "Discharged Energy",
+        "state": "total_increasing",
         "unit": "kWh",
-        "type": "ENERGY_STORAGE",
-        #"icon": "mdi:thermometer"
+        "type": "ENERGY",
     },
     'charge': {
-        "name": "Charged Today",
-        "state": "measurement",
+        "name": "Charged Energy",
+        "state": "total_increasing",
         "unit": "kWh",
-        "type": "ENERGY_STORAGE",
-        #"icon": "mdi:thermometer"
+        "type": "ENERGY",
     },
     'last_message': {
         'name': 'Last Message',

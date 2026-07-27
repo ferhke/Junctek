@@ -1,3 +1,8 @@
+## 1.0.75
+- Align sensors with JUNCTEK KL-F manual (R50): Remaining/Cumulative as **Ah**, Charge/Discharge as **kWh**
+- Rename sensors to match APP (Remaining Capacity, Cumulative Capacity, Battery Life, Charged/Discharged Energy)
+- Fix temperature filter to allow -20…120°C per manual
+
 ## 1.0.74
 - Revert 1.0.73: Charged/Discharged Today are already kWh from the device
 - Keep Ah→kWh (`* V / 1000`) only for Remaining Energy and Accumulated Charged Load

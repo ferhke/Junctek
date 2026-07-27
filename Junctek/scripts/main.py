@@ -24,17 +24,18 @@ class JunctekMonitor:
         signal.signal(signal.SIGTERM, self.signal_handler)
 
         self.params = {
-            "voltage":          "c0",       
-            "current":          "c1",       # Amps
-            "cur_soc":          "d0",       # %
-            "dir_of_current":   "d1",   
-            "ah_remaining":     "d2",       # Ah (/1000) → published as kWh
-            "discharge":        "d3",		# todays total in kWh (/100000)
-            "charge":           "d4",       # todays total in kWh (/100000)
-            "accum_charge_cap": "d5",       # Ah (/1000) → published as kWh
-            "mins_remaining":   "d6",
-            "power":            "d8",       # Watt
-            "temp":             "d9",       # C
+            # Scales from JUNCTEK KL-F manual, R50 read-all (same factors used on BLE)
+            "voltage":          "c0",       # V  (/100)
+            "current":          "c1",       # A  (/100)
+            "cur_soc":          "d0",       # % (device; we also compute from Ah)
+            "dir_of_current":   "d1",       # 0 forward / 1 reverse
+            "ah_remaining":     "d2",       # Ah (/1000) — Remaining AH.Rmn
+            "discharge":        "d3",       # kWh (/100000) — like R50 watt-hour (Electricity)
+            "charge":           "d4",       # kWh (/100000)
+            "accum_charge_cap": "d5",       # Ah (/1000) — Cumulative / Elapsed AH
+            "mins_remaining":   "d6",       # min — Battery life (BatLeft)
+            "power":            "d8",       # W  (/100)
+            "temp":             "d9",       # °C (raw - 100)
             "full_charge_volt": "e6",
             "zero_charge_volt": "e7",
         }
@@ -163,14 +164,14 @@ class JunctekMonitor:
                     if self.charging == False:
                         values["power"] *= -1
                 elif key == "temp":
+                    # Manual: ambient = raw - 100, range -20..120°C
                     temp    = val_int - 100
-
-                    if temp > 10:
+                    if -20 <= temp <= 120:
                         values[key] = temp
                 elif key == "accum_charge_cap":
                     values[key] = val_int / 1000    
 
-            # Calculate percentage
+            # SoC = remaining Ah / preset capacity (manual: AH.Remaining)
             if "ah_remaining" in values:
                 values["soc"] = values["ah_remaining"] / self.battery_capacity * 100
 
@@ -189,10 +190,9 @@ class JunctekMonitor:
                 if not key in sensors.sensors:
                     continue
 
-                # ah_remaining / accum_charge_cap are Ah → kWh = Ah * V / 1000
-                if key in ("ah_remaining", "cap", "accum_charge_cap"):
-                    val   = round(value * self.battery_voltage / 1000, 2)
-                # charge / discharge are already kWh from the device (/100000)
+                # Per KL-F R50: remaining & cumulative stay Ah; charge/discharge stay kWh
+                if key in ("ah_remaining", "accum_charge_cap"):
+                    val   = round(value, 3)
                 elif key in ("discharge", "charge"):
                     val   = round(value, 2)
                 elif key == "mins_remaining":
