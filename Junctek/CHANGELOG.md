@@ -1,3 +1,6 @@
+## 1.0.78
+- Current/Power sign: charge = positive, discharge = negative
+
 ## 1.0.77
 - Stop negating Current/Power while charging (show positive amps like the JUNCTEK APP)
 
