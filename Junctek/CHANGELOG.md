@@ -1,3 +1,6 @@
+## 1.0.72
+- Rebuild bump so Home Assistant Supervisor picks up 1.0.71 BT reconnect fix
+
 ## 1.0.71
 - Fix reconnect after restart: disconnect leftover BlueZ/HA BT link, then connect by MAC
 - Avoid waiting for advertisements (connected CH9141 devices stop advertising)
