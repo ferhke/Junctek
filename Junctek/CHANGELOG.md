@@ -1,3 +1,7 @@
+## 1.0.71
+- Fix reconnect after restart: disconnect leftover BlueZ/HA BT link, then connect by MAC
+- Avoid waiting for advertisements (connected CH9141 devices stop advertising)
+
 ## 1.0.70
 - Rename changelog to `CHANGELOG.md` so Home Assistant can find it
 - Force store refresh for energy scaling fix (1.0.69)

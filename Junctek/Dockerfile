@@ -2,9 +2,11 @@ ARG BUILD_FROM
 FROM $BUILD_FROM
 
 # Install requirements for add-on
+# bluez provides bluetoothctl to drop leftover HA/BlueZ connections
 RUN \
   apk add --no-cache \
-    python3
+    python3 \
+    bluez
 
 # Python 3 HTTP Server serves the current working dir
 # So let's set it to our add-on persistent data directory.

@@ -223,9 +223,9 @@ class JunctekMonitor:
                 self.found.append(device.address)
 
                 if name == None:
-                    self.logger.info(f"Found '{device.address}'")
+                    self.logger.debug(f"Found '{device.address}'")
                 else:
-                    self.logger.info(f"Found '{name}' with address '{device.address}'")
+                    self.logger.debug(f"Found '{name}' with address '{device.address}'")
             else:
                 if name == None:
                     self.logger.debug(f"'{device.address}' is not: {self.mac_address}")
@@ -242,6 +242,29 @@ class JunctekMonitor:
             self.device = None
         except Exception as e:
             self.logger.error(f" {str(e)} on line {sys.exc_info()[-1].tb_lineno}")
+
+    async def release_existing_connection(self):
+        """Drop any leftover BlueZ/HA connection so the device advertises again."""
+        try:
+            self.logger.info(f"Releasing existing BT connection to {self.mac_address} if held")
+            proc = await asyncio.create_subprocess_exec(
+                "bluetoothctl", "disconnect", self.mac_address,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=15)
+            out = (stdout or b"").decode().strip()
+            err = (stderr or b"").decode().strip()
+            if out:
+                self.logger.info(f"bluetoothctl: {out}")
+            if err:
+                self.logger.debug(f"bluetoothctl stderr: {err}")
+            # Give BlueZ/HA a moment to fully release the link
+            await asyncio.sleep(2)
+        except FileNotFoundError:
+            self.logger.warning("bluetoothctl not found; cannot release existing BT connection")
+        except Exception as e:
+            self.logger.warning(f"Could not release existing BT connection: {e}")
 
     async def connect(self):
         try:
@@ -260,36 +283,53 @@ class JunctekMonitor:
             self.logger.error(f" {str(e)} on line {sys.exc_info()[-1].tb_lineno}")
 
     async def main(self):
+        read_characteristic_uuid = "0000fff1-0000-1000-8000-00805f9b34fb"
+
         while not self.should_quit:
-            await  self.connect()
+            # HA Bluetooth often keeps the Junctek (CH9141) link after addon restart.
+            # Connected devices stop advertising, so scanning never finds them.
+            await self.release_existing_connection()
 
-            self.logger.info("Starting Listener")
+            self.logger.info(f"Connecting directly to {self.mac_address}")
             try:
-                while self.device == None:
-                    self.logger.debug("Waiting for device conection")
-                    await asyncio.sleep(5)
+                async with BleakClient(
+                    self.mac_address,
+                    disconnected_callback=self.disconnected_callback,
+                    timeout=30.0,
+                ) as client:
+                    name = client.address
+                    try:
+                        if client.name:
+                            name = client.name
+                    except Exception:
+                        pass
+                    self.logger.info(f"Connected to {name}")
 
-                async with BleakClient(self.device, disconnected_callback=self.disconnected_callback) as client:
-                    self.logger.info(f"Connected to {self.device.name}")
-                    
-                    read_characteristic_uuid = "0000fff1-0000-1000-8000-00805f9b34fb"
-                    
-                    self.logger.debug(f"read_characteristic_uuid is {read_characteristic_uuid}")
-                    
                     await client.start_notify(read_characteristic_uuid, self.process_data)
 
                     # Wait till disconnected
                     await self.disconnect_event.wait()
-
-                    await asyncio.sleep(5)
-
-                    # Now run again to connect again
                     self.disconnect_event.clear()
             except BleakError as e:
-                self.logger.error(f"Error: {e}")
-                #continue  # continue in error case 
+                self.logger.error(f"Direct connect failed ({e}); falling back to scan")
+                self.stop_event.clear()
+                self.device = None
+                await self.connect()
+                if self.device is not None:
+                    try:
+                        async with BleakClient(
+                            self.device,
+                            disconnected_callback=self.disconnected_callback,
+                            timeout=30.0,
+                        ) as client:
+                            self.logger.info(f"Connected to {self.device}")
+                            await client.start_notify(read_characteristic_uuid, self.process_data)
+                            await self.disconnect_event.wait()
+                            self.disconnect_event.clear()
+                    except Exception as scan_err:
+                        self.logger.error(f"Scan connect failed: {scan_err}")
             except TimeoutError as e:
-                self.logger.debug(f"Timeout {e}")
+                self.logger.warning(f"Timeout connecting to {self.mac_address}: {e}")
             except Exception as e:
                 if str(e) != '':
                     self.logger.error(f" {str(e)} on line {sys.exc_info()[-1].tb_lineno}")
