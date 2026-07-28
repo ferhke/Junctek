@@ -73,6 +73,11 @@ class JunctekMonitor:
         # Last known V/I — BLE sends fragmented frames; Power from D8 is often wrong/stale
         self.last_voltage           = None
         self.last_current_abs       = None
+        # D1 (dir_of_current) almost never appears in BLE notify on KL140F;
+        # infer charge/discharge from Ah / energy counters instead.
+        self.last_ah_remaining      = None
+        self.last_charge_kwh        = None
+        self.last_discharge_kwh     = None
 
 
     def signal_handler(self, sig, frame):
@@ -153,9 +158,8 @@ class JunctekMonitor:
                 elif key == "charge":
                     values[key] = val_int / 100000
                 elif key == "dir_of_current":
-                    # R50: 0 = forward, 1 = reverse.
-                    # On this install (KL140F + inverter): forward = charge (+), reverse = discharge (−).
-                    # Verified against inverter PV charge while shunt previously showed wrong sign.
+                    # R50: 0 = forward, 1 = reverse. Rarely present in BLE notify;
+                    # Ah/energy inference below is the reliable source of truth.
                     self.charging = val_int == 0
                     del values[key]
                 elif key == "ah_remaining":
@@ -177,6 +181,30 @@ class JunctekMonitor:
                 elif key in ("cur_soc", "full_charge_volt", "zero_charge_volt"):
                     # Not published (SoC computed; e6/e7 unused)
                     del values[key]
+
+            # Infer direction: remaining Ah rising = charge, falling = discharge.
+            # Cross-check with which kWh counter is ticking (BLE sends charge XOR discharge).
+            if "ah_remaining" in values:
+                ah = values["ah_remaining"]
+                if self.last_ah_remaining is not None:
+                    delta_ah = ah - self.last_ah_remaining
+                    if delta_ah > 0.001:
+                        self.charging = True
+                    elif delta_ah < -0.001:
+                        self.charging = False
+                self.last_ah_remaining = ah
+
+            if "charge" in values:
+                ch = values["charge"]
+                if self.last_charge_kwh is not None and ch > self.last_charge_kwh + 1e-6:
+                    self.charging = True
+                self.last_charge_kwh = ch
+
+            if "discharge" in values:
+                dch = values["discharge"]
+                if self.last_discharge_kwh is not None and dch > self.last_discharge_kwh + 1e-6:
+                    self.charging = False
+                self.last_discharge_kwh = dch
 
             # Cache V and unsigned I from this frame
             if "voltage" in values:

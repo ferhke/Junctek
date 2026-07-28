@@ -1,3 +1,7 @@
+## 1.0.81
+- Fix charge/discharge sign: BLE notify almost never sends D1, so direction stayed stuck on discharge (−)
+- Infer direction from remaining Ah trend and charge/discharge kWh counters (verified vs Solar01)
+
 ## 1.0.80
 - Invert D1 charge/discharge mapping (forward=charge +, reverse=discharge −) to match inverter
 
