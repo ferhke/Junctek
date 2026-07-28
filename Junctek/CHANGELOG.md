@@ -1,3 +1,8 @@
+## 1.0.82
+- Fix MQTT spam: stop gating publishes on `homeassistant/status` (use broker connection)
+- Unique MQTT client id, non-blocking reconnect, rate-limit queue warnings
+- Fix daily energy offset check (`total_increasing` case)
+
 ## 1.0.81
 - Fix charge/discharge sign: BLE notify almost never sends D1, so direction stayed stuck on discharge (−)
 - Infer direction from remaining Ah trend and charge/discharge kWh counters (verified vs Solar01)
