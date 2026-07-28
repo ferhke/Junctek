@@ -55,6 +55,7 @@ sensors = {
         "state": "measurement",
         "unit": "kWh",
         "type": "ENERGY_STORAGE",
+        "icon": "mdi:battery-heart-variant"
     },
     'mins_remaining': {
         "name": "Battery Life",
