@@ -70,7 +70,10 @@ class JunctekMonitor:
 
         self.stop_event             = asyncio.Event()
         self.disconnect_event       = asyncio.Event()
-        
+        # Last known V/I — BLE sends fragmented frames; Power from D8 is often wrong/stale
+        self.last_voltage           = None
+        self.last_current_abs       = None
+
 
     def signal_handler(self, sig, frame):
         self.logger.warning(f'Received signal {sig}')
@@ -158,6 +161,8 @@ class JunctekMonitor:
                 elif key == "mins_remaining":
                     values[key] = val_int
                 elif key == "power":
+                    # D8 from BLE is unreliable on KL140F (often ~10x low vs U×I).
+                    # Prefer computed power below; keep raw only as weak fallback.
                     values[key] = val_int / 100
                 elif key == "temp":
                     temp = val_int - 100
@@ -171,10 +176,22 @@ class JunctekMonitor:
                     # Not published (SoC computed; e6/e7 unused)
                     del values[key]
 
-            # Sign: charge positive, discharge negative (user preference)
+            # Cache V and unsigned I from this frame
+            if "voltage" in values:
+                self.last_voltage = values["voltage"]
+            if "current" in values:
+                self.last_current_abs = values["current"]
+
+            # Sign: charge positive, discharge negative
             if "current" in values and not self.charging:
                 values["current"] *= -1
-            if "power" in values and not self.charging:
+
+            # Power = U × I (physics). Matches Battery Life vs Ah/current.
+            # Always overwrite D8 when we can compute — fixes 164W vs ~1600W class errors.
+            if self.last_voltage is not None and self.last_current_abs is not None:
+                signed_i = self.last_current_abs if self.charging else -self.last_current_abs
+                values["power"] = self.last_voltage * signed_i
+            elif "power" in values and not self.charging:
                 values["power"] *= -1
 
             # SoC = remaining Ah / preset capacity (manual: remaining / AH.Preset)
@@ -211,7 +228,7 @@ class JunctekMonitor:
                 else:
                     val = round(value, 1)
 
-                if val > -99:
+                if val > -100000:  # allow large negative discharge power
                     self.MqqtToHa.send_value(key, val)
                     
             # https://www.home-assistant.io/docs/configuration/templating/#time
