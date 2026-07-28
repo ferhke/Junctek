@@ -174,21 +174,6 @@ class MqqtToHa:
 
             topic = self.sensors[key]["base_topic"] + "/state"
 
-            # Bug: compared TOTAL_INCREASING but sensors use total_increasing
-            if self.sensors[key].get("state") == "total_increasing":
-                if "last_update" in self.sensors[key]:
-                    today = datetime.now().strftime("%Y-%m-%d")
-                    last_update_date = strftime(
-                        "%Y-%m-%d", localtime(self.sensors[key]["last_update"])
-                    )
-                    if today > last_update_date:
-                        self.sensors[key]["offset"] = value
-
-                if "offset" not in self.sensors[key]:
-                    self.sensors[key]["offset"] = value
-
-                value = round(value - self.sensors[key]["offset"], 1)
-
             self.sensors[key]["last_update"] = time.time()
 
             payload = json.dumps(value) if send_json else value

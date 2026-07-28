@@ -228,6 +228,11 @@ class JunctekMonitor:
             if "ah_remaining" in values and self.battery_capacity > 0:
                 values["soc"] = values["ah_remaining"] / self.battery_capacity * 100
 
+            # Publish Battery Life as signed minutes: + during charge, - during discharge.
+            if "mins_remaining" in values:
+                if not self.charging:
+                    values["mins_remaining"] *= -1
+
             if self.debug:
                 self.logger.debug(f"Final values: {values} charging={self.charging}")
 

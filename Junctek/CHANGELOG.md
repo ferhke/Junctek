@@ -1,3 +1,13 @@
+## 1.0.85
+- Restore absolute `Charged Energy` and `Discharged Energy` values from the shunt
+- Stop subtracting a daily zero offset from MQTT `total_increasing` sensors
+
+## 1.0.84
+- Keep a single `Battery Life` sensor and publish signed minutes: `+` for charge, `-` for discharge
+
+## 1.0.83
+- Add separate `Charge Time Remaining` and `Discharge Time Remaining` sensors from the device Battery Life field
+
 ## 1.0.82
 - Fix MQTT spam: stop gating publishes on `homeassistant/status` (use broker connection)
 - Unique MQTT client id, non-blocking reconnect, rate-limit queue warnings
