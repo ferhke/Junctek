@@ -50,6 +50,12 @@ sensors = {
         "unit": "Ah",
         "icon": "mdi:battery"
     },
+    'energy_remaining': {
+        "name": "Remaining Energy",
+        "state": "measurement",
+        "unit": "kWh",
+        "type": "ENERGY_STORAGE",
+    },
     'mins_remaining': {
         "name": "Battery Life",
         "state": "measurement",

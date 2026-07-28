@@ -228,6 +228,11 @@ class JunctekMonitor:
             if "ah_remaining" in values and self.battery_capacity > 0:
                 values["soc"] = values["ah_remaining"] / self.battery_capacity * 100
 
+            # Remaining energy (kWh) = remaining Ah × V / 1000
+            if "ah_remaining" in values:
+                volts = self.last_voltage if self.last_voltage is not None else self.battery_voltage
+                values["energy_remaining"] = values["ah_remaining"] * volts / 1000
+
             # Publish Battery Life as signed minutes: + during charge, - during discharge.
             if "mins_remaining" in values:
                 if not self.charging:
@@ -250,7 +255,7 @@ class JunctekMonitor:
                 # Rounding matches KL140F resolutions in the manual
                 if key in ("ah_remaining", "accum_charge_cap"):
                     val = round(value, 3)          # 0.001 Ah
-                elif key in ("discharge", "charge"):
+                elif key in ("discharge", "charge", "energy_remaining"):
                     val = round(value, 5)          # 0.01 Wh → 0.00001 kWh
                 elif key == "voltage":
                     val = round(value, 2)          # 0.01 V

@@ -1,3 +1,6 @@
+## 1.0.86
+- Add `Remaining Energy` sensor in kWh (`Ah × V / 1000`)
+
 ## 1.0.85
 - Restore absolute `Charged Energy` and `Discharged Energy` values from the shunt
 - Stop subtracting a daily zero offset from MQTT `total_increasing` sensors
