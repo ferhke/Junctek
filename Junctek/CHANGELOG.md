@@ -1,3 +1,6 @@
+## 1.0.80
+- Invert D1 charge/discharge mapping (forward=charge +, reverse=discharge −) to match inverter
+
 ## 1.0.79
 - Fix Power: compute as Voltage × Current (BLE D8 was ~10× low, e.g. 164W vs ~1627W at 51V/−31.9A)
 - Keep Current/Power signs consistent (charge +, discharge −)

@@ -153,8 +153,10 @@ class JunctekMonitor:
                 elif key == "charge":
                     values[key] = val_int / 100000
                 elif key == "dir_of_current":
-                    # R50: 0 = forward, 1 = reverse. APP: reverse/charge grows remaining Ah
-                    self.charging = val_int == 1
+                    # R50: 0 = forward, 1 = reverse.
+                    # On this install (KL140F + inverter): forward = charge (+), reverse = discharge (−).
+                    # Verified against inverter PV charge while shunt previously showed wrong sign.
+                    self.charging = val_int == 0
                     del values[key]
                 elif key == "ah_remaining":
                     values[key] = val_int / 1000
