@@ -352,13 +352,30 @@ class JunctekMonitor:
         except Exception as e:
             self.logger.error(f" {str(e)} on line {sys.exc_info()[-1].tb_lineno}")
 
+    async def _hold_ble_session(self, client, label):
+        """Subscribe to notifies and block until a real disconnect."""
+        # Bleak fires disconnected_callback when the previous client context
+        # exits, which leaves disconnect_event set. Clearing here is required
+        # or wait() returns immediately and we reconnect every ~sleep cycle.
+        self.disconnect_event.clear()
+        self.logger.info(f"Connected to {label}")
+        await client.start_notify(
+            "0000fff1-0000-1000-8000-00805f9b34fb",
+            self.process_data,
+        )
+        await self.disconnect_event.wait()
+        self.disconnect_event.clear()
+        self.logger.warning(f"BLE session ended for {label}")
+
     async def main(self):
-        read_characteristic_uuid = "0000fff1-0000-1000-8000-00805f9b34fb"
+        # HA Bluetooth often keeps the Junctek (CH9141) link after addon restart.
+        # Force bluetoothctl disconnect only on startup / connect failure.
+        need_release = True
 
         while not self.should_quit:
-            # HA Bluetooth often keeps the Junctek (CH9141) link after addon restart.
-            # Connected devices stop advertising, so scanning never finds them.
-            await self.release_existing_connection()
+            if need_release:
+                await self.release_existing_connection()
+            need_release = False
 
             self.logger.info(f"Connecting directly to {self.mac_address}")
             try:
@@ -373,17 +390,13 @@ class JunctekMonitor:
                             name = client.name
                     except Exception:
                         pass
-                    self.logger.info(f"Connected to {name}")
-
-                    await client.start_notify(read_characteristic_uuid, self.process_data)
-
-                    # Wait till disconnected
-                    await self.disconnect_event.wait()
-                    self.disconnect_event.clear()
+                    await self._hold_ble_session(client, name)
             except BleakError as e:
                 self.logger.error(f"Direct connect failed ({e}); falling back to scan")
+                need_release = True
                 self.stop_event.clear()
                 self.device = None
+                await self.release_existing_connection()
                 await self.connect()
                 if self.device is not None:
                     try:
@@ -392,15 +405,15 @@ class JunctekMonitor:
                             disconnected_callback=self.disconnected_callback,
                             timeout=30.0,
                         ) as client:
-                            self.logger.info(f"Connected to {self.device}")
-                            await client.start_notify(read_characteristic_uuid, self.process_data)
-                            await self.disconnect_event.wait()
-                            self.disconnect_event.clear()
+                            await self._hold_ble_session(client, self.device)
                     except Exception as scan_err:
                         self.logger.error(f"Scan connect failed: {scan_err}")
+                        need_release = True
             except TimeoutError as e:
                 self.logger.warning(f"Timeout connecting to {self.mac_address}: {e}")
+                need_release = True
             except Exception as e:
+                need_release = True
                 if str(e) != '':
                     self.logger.error(f" {str(e)} on line {sys.exc_info()[-1].tb_lineno}")
 

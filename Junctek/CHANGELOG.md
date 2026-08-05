@@ -1,3 +1,7 @@
+## 1.0.87
+- Fix BLE reconnect storm: clear stale `disconnect_event` after connect (Bleak sets it on prior client exit, so `wait()` returned immediately ~every 8s)
+- Only run `bluetoothctl disconnect` when a fresh link is needed, not on every loop pass
+
 ## 1.0.86
 - Add `Remaining Energy` sensor in kWh (`Ah × V / 1000`)
 
